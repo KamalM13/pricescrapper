@@ -1,6 +1,6 @@
 import axios from "axios"
 import * as cheerio from "cheerio"
-import { extractCurrency, extractPrice } from "../utils"
+import { extractCurrency, extractDescription, extractPrice } from "../utils"
 
 export async function scrapeAmazonProduct(url: string) {
     if (!url) return
@@ -28,6 +28,7 @@ export async function scrapeAmazonProduct(url: string) {
 
         // Extract product data
         const title = $("#productTitle").text().trim()
+
         const currentPrice = extractPrice(
             $(".priceToPay span.a-price-whole"),
             $('a.size.base.a-color-price'),
@@ -54,26 +55,32 @@ export async function scrapeAmazonProduct(url: string) {
         const currency = extractCurrency($(".a-price.a-text-price span.a-offscreen"))
 
         const discountRate = (originalPrice - currentPrice) / originalPrice * 100
-        
+
         const reviewsCount = parseInt($("#acrCustomerReviewText").text().split(" ")[0].replace(",", ""))
 
         const rating = parseFloat($("#acrPopover").text())
+
+        const description = extractDescription($)
 
         // Construct object
         const data = {
             url,
             title,
-            currentPrice,
-            originalPrice,
+            currentPrice: parseFloat(currentPrice) || parseFloat(originalPrice),
+            originalPrice: parseFloat(originalPrice) || parseFloat(currentPrice),
             discountRate: Number(discountRate.toFixed(0)) || 0,
             priceHistory: [],
-            reviewsCount: 99 || reviewsCount,
-            rating: 4.5 || rating, 
+            reviewsCount: reviewsCount || 99,
+            rating: rating || 4.5,
             currency: currency || "$",
             image: imageUrls[0],
             isOutOfStock: outOfStock,
+            description: description || "No description available",
+            lowestPrice: parseFloat(currentPrice) || parseFloat(originalPrice),
+            highestPrice: parseFloat(originalPrice) || parseFloat(currentPrice),
+            averagePrice: parseFloat(originalPrice) || parseFloat(currentPrice),
         }
-        console.log(data)
+        return data
     } catch (error) {
         throw new Error(`Error scraping Amazon product: ${error}`)
     }
